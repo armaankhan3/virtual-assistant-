@@ -55,11 +55,13 @@ export const UpdateAssistent = async (req, res) => {
             // No transformation needed for Vite/React static assets
         }
 
+        // Ensure description is always set
+        const safeDescription = (description && description.trim()) ? description.trim() : 'A creative and friendly assistant for your daily needs.';
         // Optionally: store a timestamp for assistant update
         const updateData = {
             assistantName: assistantName.trim(),
             assistantImage: finalAssistantImage,
-            description: description.trim(),
+            description: safeDescription,
             assistantUpdatedAt: new Date(),
         };
 
@@ -90,7 +92,6 @@ export const UpdateAssistent = async (req, res) => {
 export const askToAssistant = async (req, res) => {
     try {
         const { command } = req.body;
-        // Fix: use correct user fetching and variable names
         const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).json({ response: "User not found" });
@@ -98,68 +99,11 @@ export const askToAssistant = async (req, res) => {
         const userName = user.name;
         const assistantName = user.assistantName;
         const result = await geminiResponse(command, assistantName, userName);
-
-        // Try to parse JSON from Gemini response
-        let gemResult;
-        try {
-            // Try to extract JSON block if present
-            const jsonMatch = result.match(/```json\n([\s\S]*?)\n```/);
-            if (jsonMatch) {
-                gemResult = JSON.parse(jsonMatch[1]);
-            } else {
-                gemResult = JSON.parse(result);
-            }
-        } catch (err) {
+        // Directly return the result object from geminiResponse
+        if (!result || !result.response) {
             return res.status(400).json({ response: "Sorry, I can't understand." });
         }
-        const type = gemResult.type;
-
-        switch (type) {
-            case "get_date":
-            case "get-date":
-                return res.json({
-                    type: "get-date",
-                    response: `Today is ${moment().format("MMMM Do YYYY")}`,
-                    responseText: `Today is ${moment().format("MMMM Do YYYY")}`
-                });
-            case "get_day":
-            case "get-day":
-                return res.json({
-                    type: "get-day",
-                    response: `Today is ${moment().format("dddd")}`,
-                    responseText: `Today is ${moment().format("dddd")}`
-                });
-            case "get_month":
-            case "get-month":
-                return res.json({
-                    type: "get-month",
-                    response: `Current month is ${moment().format("MMMM")}`,
-                    responseText: `Current month is ${moment().format("MMMM")}`
-                });
-            case "get_time":
-            case "get-time":
-                return res.json({
-                    type: "get-time",
-                    response: `Current time is ${moment().format("hh:mm A")}`,
-                    responseText: `Current time is ${moment().format("hh:mm A")}`
-                });
-            case "general":
-            case "google_search":
-            case "youtube_search":
-            case "youtube_play":
-            case "calculator_open":
-            case "instagram_open":
-            case "facebook_open":
-            case "weather_show":
-                return res.json({
-                    type: type,
-                    userinput: gemResult.userinput,
-                    response: gemResult.response,
-                    responseText: gemResult.responseText || gemResult.response
-                });
-            default:
-                return res.status(400).json({ response: "Sorry, I can't understand that command." });
-        }
+        return res.json(result);
     } catch (error) {
         return res.status(500).json({ response: "An error occurred while processing your request", error: error.message });
     }

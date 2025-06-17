@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../contaxt/UserContext';
 
 // AudioStatus component: shows assistant name, online status, and voice command UI
-const AudioStatus = ({ assistantName, listening, command }) => (
+const AudioStatus = ({ assistantName, listening }) => (
   <div className="flex flex-col items-center justify-center h-full w-full bg-gradient-to-br from-[#0a0a0f] via-[#181c2f] to-[#0f0026] rounded-3xl shadow-2xl p-6 md:p-8 min-h-[340px] min-w-[260px] md:min-h-[400px] md:min-w-[320px] relative overflow-hidden">
     {/* Animated background grid */}
     <div className="absolute inset-0 opacity-20">
@@ -104,31 +104,17 @@ const AudioStatus = ({ assistantName, listening, command }) => (
         />
       ))}
     </div>
-
-    {/* Command display */}
-    <div className="text-center mb-10 min-h-[40px] flex flex-col items-center justify-center relative w-full px-6 md:px-12">
-      <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-5 md:p-10 border border-cyan-400/30 max-w-lg mx-auto w-full shadow-lg">
-        <div className="text-xl md:text-3xl font-semibold text-white mb-2 tracking-wide">
-          {command || 'Initializing neural interface...'}
-        </div>
-        {command && (
-          <div className="flex justify-center gap-3 mt-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="w-3 h-1.5 bg-cyan-400 rounded-full animate-pulse" style={{animationDelay: `${i * 0.1}s`}}></div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
   </div>
 );
 
 const Home = () => {
-  const { userdata,getGeminiResponse } = useContext(UserContext);
+  const { userdata, getGeminiResponse } = useContext(UserContext);
   const navigate = useNavigate();
-  
+
   const [listening, setListening] = useState(true); // Always listening
   const [command, setCommand] = useState('');
+  const [response, setResponse] = useState('');
+  const [chat, setChat] = useState([]); // [{from: 'user'|'assistant', text: string}]
 
   useEffect(() => {
     if (!userdata || !userdata.assistantImage || !userdata.assistantName) {
@@ -138,14 +124,13 @@ const Home = () => {
 
   if (!userdata || !userdata.assistantImage || !userdata.assistantName) return null;
 
- const speakCommand = (text) => {
+  const speakCommand = (text) => {
     if (!window.speechSynthesis) return;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
     utterance.voice = window.speechSynthesis.getVoices().find(voice => voice.name === 'Google US English') || null;
     window.speechSynthesis.speak(utterance);
   }
-
 
   useEffect(() => {
     const speechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -165,10 +150,12 @@ const Home = () => {
         const transcript = Array.from(event.results)
           .map(result => result[0].transcript)
           .join('');
-        if (
-          transcript.toLowerCase().includes((userdata.assistantName || '').toLowerCase())
-        ) {
-          setCommand(transcript);
+        // Improved: Only trigger if assistant name is followed by a command
+        const name = (userdata.assistantName || '').toLowerCase();
+        const regex = new RegExp(`${name}[, ]+(.*)`, 'i');
+        const match = transcript.toLowerCase().match(regex);
+        if (match && match[1]) {
+          setCommand(match[1].trim());
         }
       };
       recognition.start();
@@ -179,18 +166,46 @@ const Home = () => {
     }
   }, [userdata.assistantName]);
 
-  // Speak the assistant's response when a new command is detected and processed
+  // Speak the assistant's response when it changes, but only once per response
   useEffect(() => {
-    if (command) {
-      // Call Gemini API and speak the response
+    if (response && typeof response === 'string') {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel(); // Stop any previous speech
+        const utterance = new window.SpeechSynthesisUtterance(response);
+        utterance.lang = 'en-US';
+        const voices = window.speechSynthesis.getVoices();
+        utterance.voice =
+          voices.find(v => v.name === 'Google US English') ||
+          voices.find(v => v.lang === 'en-US') ||
+          null;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+  }, [response]);
+
+  // When you get a response from Gemini, set it to `response` state and update chat
+  useEffect(() => {
+    if (command && typeof command === 'string' && command.trim().length > 0) {
       (async () => {
+        setChat(prev => [...prev, { from: 'user', text: command }]);
         try {
           const geminiRes = await getGeminiResponse(command);
+          console.log('Gemini API response:', geminiRes); // Log response to browser console
           if (geminiRes && geminiRes.response) {
-            speakCommand(geminiRes.response);
+            setResponse(geminiRes.response);
+            setChat(prev => [...prev, { from: 'assistant', text: geminiRes.response }]);
+            // If Gemini response includes a redirectUrl, open it in a new tab
+            if (geminiRes.redirectUrl) {
+              window.open(geminiRes.redirectUrl, '_blank');
+            }
+          } else {
+            setResponse("Sorry, I didn't get that.");
+            setChat(prev => [...prev, { from: 'assistant', text: "Sorry, I didn't get that." }]);
           }
         } catch (err) {
-          // Optionally handle error
+          console.error('Gemini API error:', err); // Log error to browser console
+          setResponse("Sorry, something went wrong.");
+          setChat(prev => [...prev, { from: 'assistant', text: "Sorry, something went wrong." }]);
         }
       })();
     }
@@ -251,22 +266,110 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Right: AudioStatus (no mic button, always listening) */}
-      <div className="flex-1 flex items-center justify-center w-full max-w-xl relative z-10 min-w-[340px] min-h-[540px] md:min-w-[420px] md:min-h-[600px]">
+      {/* Right: AudioStatus and Chat Section */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-xl relative z-10 min-w-[340px] min-h-[540px] md:min-w-[420px] md:min-h-[600px]">
         <AudioStatus
           assistantName={userdata.assistantName}
           listening={true} // Always listening
-          command={command}
         />
+        {/* Chat-like response area */}
+        <div
+          className="w-full max-w-lg mt-8 flex flex-col gap-2"
+          style={{
+            height: '340px',
+            maxHeight: '340px',
+            overflowY: 'auto',
+            background: 'rgba(30,35,60,0.55)',
+            borderRadius: '1.5rem',
+            padding: '1.5rem 1rem',
+            border: '1.5px solid rgba(0,255,255,0.15)',
+            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.25), 0 1.5px 8px 0 rgba(0,255,255,0.08)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+          }}
+        >
+          {chat.length === 0 && (
+            <div className="text-center text-gray-400">Say "{userdata.assistantName}, ..." to start the conversation.</div>
+          )}
+          {chat.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`flex items-end gap-2 ${msg.from === 'user' ? 'justify-end' : 'justify-start'} animate-fadein`}
+            >
+              {msg.from === 'assistant' && (
+                <div className="flex-shrink-0">
+                  <img
+                    src={userdata.assistantImage}
+                    alt={userdata.assistantName}
+                    className="w-8 h-8 rounded-full border-2 border-cyan-400 shadow"
+                  />
+                </div>
+              )}
+              <div
+                className={`
+                  relative px-5 py-3 max-w-[75%] shadow-lg
+                  ${msg.from === 'user'
+                    ? 'bg-gradient-to-br from-cyan-500 via-blue-600 to-blue-800 text-white self-end rounded-2xl rounded-br-sm'
+                    : 'bg-gradient-to-br from-purple-500 via-indigo-600 to-indigo-800 text-white self-start rounded-2xl rounded-bl-sm'
+                  }
+                `}
+                style={{
+                  marginBottom: '0.25rem',
+                  border: msg.from === 'user'
+                    ? '1.5px solid rgba(0,255,255,0.18)'
+                    : '1.5px solid rgba(180,100,255,0.18)',
+                  position: 'relative',
+                }}
+              >
+                <span className="block text-xs font-semibold mb-1 opacity-80">
+                  {msg.from === 'user' ? 'You' : userdata.assistantName}
+                </span>
+                <span className="block text-base">{msg.text}</span>
+                {/* Message tail */}
+                <span
+                  className={`
+                    absolute bottom-0
+                    ${msg.from === 'user'
+                      ? 'right-0 translate-x-1/2'
+                      : 'left-0 -translate-x-1/2'
+                    }
+                  `}
+                  style={{
+                    width: 0,
+                    height: 0,
+                    borderTop: '10px solid transparent',
+                    borderBottom: '0 solid transparent',
+                    borderLeft: msg.from === 'user' ? '10px solid #2563eb' : 'none',
+                    borderRight: msg.from === 'assistant' ? '10px solid #7c3aed' : 'none',
+                  }}
+                />
+              </div>
+              {msg.from === 'user' && (
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white font-bold shadow">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor" /></svg>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes shimmer {
           0% { transform: translateX(-100%) skewX(12deg); }
           100% { transform: translateX(200%) skewX(12deg); }
         }
         .animate-shimmer {
           animation: shimmer 2s infinite;
+        }
+        @keyframes fadein {
+          from { opacity: 0; transform: translateY(20px);}
+          to { opacity: 1; transform: translateY(0);}
+        }
+        .animate-fadein {
+          animation: fadein 0.5s;
         }
       `}</style>
     </div>
