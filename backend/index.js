@@ -11,7 +11,11 @@ import geminiResponse from './Gemini.js';
 
 const app = express();
 app.use(cors({
-    origin: "https://ai-assistant-frontend-brown.vercel.app/",
+    origin: [
+        "https://ai-assistant-frontend-brown.vercel.app",
+        "http://localhost:5173",
+        "*"
+    ],
     credentials: true,
 }));
 const PORT = process.env.PORT || 8000;
