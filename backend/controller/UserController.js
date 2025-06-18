@@ -98,13 +98,26 @@ export const askToAssistant = async (req, res) => {
         }
         const userName = user.name;
         const assistantName = user.assistantName;
-        const result = await geminiResponse(command, assistantName, userName);
-        // Directly return the result object from geminiResponse
+        let result;
+        try {
+            result = await geminiResponse(command, assistantName, userName);
+        } catch (err) {
+            result = null;
+        }
+        // Always return a response, even if Gemini fails
         if (!result || !result.response) {
-            return res.status(400).json({ response: "Sorry, I can't understand." });
+            return res.json({
+                type: "general",
+                userinput: command,
+                response: "Sorry, I couldn't process your request, but I'm here to help!",
+                redirectUrl: null
+            });
         }
         return res.json(result);
     } catch (error) {
-        return res.status(500).json({ response: "An error occurred while processing your request", error: error.message });
+        return res.status(500).json({
+            response: "An error occurred while processing your request, but I'm still here if you want to try again.",
+            error: error.message
+        });
     }
 }
