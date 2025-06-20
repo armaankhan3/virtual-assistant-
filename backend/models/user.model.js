@@ -22,13 +22,6 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
-    description: {
-        type: String,
-        default: ""
-    },
-    assistantUpdatedAt: {
-        type: Date
-    },
     history: {
         type: [mongoose.Schema.Types.Mixed],
         default: []
