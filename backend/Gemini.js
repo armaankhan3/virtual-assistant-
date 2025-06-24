@@ -2,16 +2,258 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Load .env if not already loaded (for local dev)
+// Load .env fallback
 if (typeof process !== 'undefined' && process.env) {
-  if (!process.env.GEMINI_API_URL || !process.env.GEMINI_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     try { require('dotenv').config(); } catch (e) { console.log('dotenv not available'); }
   }
 }
 
+// ✅ Built-in Command Handler
+const handleBuiltInCommand = (command, userName = "User") => {
+  const normalized = command.toLowerCase().trim();
+
+  if (normalized.includes("time")) {
+    const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    return {
+      type: "general",
+      userinput: command,
+      response: `The current time is ${time}`,
+      redirectUrl: null
+    };
+  }
+
+  if (normalized.includes("date")) {
+    const date = new Date().toLocaleDateString('en-IN');
+    return {
+      type: "general",
+      userinput: command,
+      response: `Today's date is ${date}`,
+      redirectUrl: null
+    };
+  }
+
+  if (normalized.includes("open youtube")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening YouTube...",
+      redirectUrl: "https://www.youtube.com"
+    };
+  }
+  if (normalized.includes("open instagram")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening instagram...",
+      redirectUrl: "https://www.instagram.com"
+    };
+  }
+    if (normalized.includes("news")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Here are the latest news headlines.",
+      redirectUrl: "https://news.google.com"
+    };
+  }
+
+  if (normalized.includes("cricket score")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Fetching the latest cricket scores...",
+      redirectUrl: "https://www.espncricinfo.com"
+    };
+  }
+
+  if (normalized.includes("google maps") || normalized.includes("location")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening Google Maps...",
+      redirectUrl: "https://maps.google.com"
+    };
+  }
+
+  if (normalized.includes("email") || normalized.includes("gmail")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening Gmail...",
+      redirectUrl: "https://mail.google.com"
+    };
+  }
+
+  if (normalized.includes("open facebook")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening Facebook...",
+      redirectUrl: "https://www.facebook.com"
+    };
+  }
+
+  if (normalized.includes("spotify") || normalized.includes("play music")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening Spotify...",
+      redirectUrl: "https://open.spotify.com"
+    };
+  }
+
+  if (normalized.includes("shopping") || normalized.includes("buy")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening Amazon for shopping...",
+      redirectUrl: "https://www.amazon.in"
+    };
+  }
+
+  if (normalized.includes("flipkart")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening Flipkart...",
+      redirectUrl: "https://www.flipkart.com"
+    };
+  }
+
+  if (normalized.includes("open whatsapp")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening WhatsApp Web...",
+      redirectUrl: "https://web.whatsapp.com"
+    };
+  }
+
+  if (normalized.includes("translate")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening Google Translate...",
+      redirectUrl: "https://translate.google.com"
+    };
+  }
+
+  if (normalized.includes("currency rate") || normalized.includes("usd to inr")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening exchange rates...",
+      redirectUrl: "https://www.xe.com"
+    };
+  }
+
+  if (normalized.includes("train status")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening train running status...",
+      redirectUrl: "https://enquiry.indianrail.gov.in"
+    };
+  }
+
+  if (normalized.includes("book ticket") || normalized.includes("irctc")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening IRCTC for train booking...",
+      redirectUrl: "https://www.irctc.co.in"
+    };
+  }
+
+  if (normalized.includes("movie") || normalized.includes("bookmyshow")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening BookMyShow for movie tickets...",
+      redirectUrl: "https://in.bookmyshow.com"
+    };
+  }
+
+  if (normalized.includes("zomato") || normalized.includes("food")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening Zomato for food delivery...",
+      redirectUrl: "https://www.zomato.com"
+    };
+  }
+
+  if (normalized.includes("swiggy")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening Swiggy...",
+      redirectUrl: "https://www.swiggy.com"
+    };
+  }
+
+  if (normalized.includes("linkedin")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening LinkedIn...",
+      redirectUrl: "https://www.linkedin.com"
+    };
+  }
+
+  if (normalized.includes("resume") || normalized.includes("cv")) {
+    return {
+      type: "general",
+      userinput: command,
+      response: "Need help creating a resume? I recommend using Canva or Novoresume.",
+      redirectUrl: "https://www.canva.com/resumes"
+    };
+  }
+
+
+  if (normalized.includes("open google")) {
+    return {
+      type: "action",
+      userinput: command,
+      response: "Opening Google...",
+      redirectUrl: "https://www.google.com"
+    };
+  }
+
+  if (normalized.includes("weather")) {
+    return {
+      type: "general",
+      userinput: command,
+      response: "Weather info is not available right now. You can enable a weather API to fetch live data.",
+      redirectUrl: null
+    };
+  }
+
+  if (normalized.includes("joke")) {
+    return {
+      type: "general",
+      userinput: command,
+      response: "Why did the computer go to therapy? Because it had too many bytes of emotional baggage!",
+      redirectUrl: null
+    };
+  }
+
+  if (normalized.includes("who created you")) {
+    return {
+      type: "general",
+      userinput: command,
+      response: `I was created by Armaan bhai using advanced AI technology.`,
+      redirectUrl: null
+    };
+  }
+
+  return null; // Not a built-in command
+};
+
+// ✅ Main Function
 const geminiResponse = async (command, assistantName, userName = "Unknown") => {
   try {
-    // Validate input
     if (!command || typeof command !== 'string' || !command.trim()) {
       return {
         type: "general",
@@ -20,6 +262,7 @@ const geminiResponse = async (command, assistantName, userName = "Unknown") => {
         redirectUrl: null
       };
     }
+
     if (!assistantName || typeof assistantName !== 'string' || !assistantName.trim()) {
       return {
         type: "general",
@@ -29,195 +272,105 @@ const geminiResponse = async (command, assistantName, userName = "Unknown") => {
       };
     }
 
-    // --- Get API key from environment ---
+    // If the command is just the assistant's name (with or without punctuation), do not answer, just listen again
+    const normalizedCmd = command.trim().toLowerCase().replace(/[!,.?]/g, '');
+    const normalizedName = assistantName.trim().toLowerCase();
+    if (normalizedCmd === normalizedName) {
+      return {
+        type: "listening",
+        userinput: command,
+        response: "Listening...",
+        redirectUrl: null
+      };
+    }
+
+    // ✅ Check Built-in Commands First
+    const builtIn = handleBuiltInCommand(command, userName);
+    if (builtIn) return builtIn;
+
+    // ✅ Gemini API Setup
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error('Gemini API key is missing or not set properly');
       return {
         type: "general",
         userinput: command,
-        response: "API key is not configured properly.",
+        response: "API key is missing or not configured.",
         redirectUrl: null
       };
     }
 
-    // Use the correct Gemini API endpoint (using gemini-2.0-flash as per your config)
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
-    // Simplified prompt that's more likely to work
-    const systemPrompt = `You are a virtual assistant named ${assistantName} created by ${userName}.
+    const systemPrompt = `You are a smart AI virtual assistant named ${assistantName}, created by ${userName}.
+Your job is to answer or help execute commands smartly.
+Reply ONLY using this JSON format:
+{
+  "type": "general",
+  "userinput": "${command}",
+  "response": "your reply here",
+  "redirectUrl": "https://example.com" // null if not needed
+}
+If you’re asked to open any app/website, always add a correct redirectUrl.
+Do not say anything outside this JSON.`;
 
-    Respond with ONLY a JSON object in this exact format:
-    {
-      "type": "general",
-      "userinput": "${command}",
-      "response": "your response here",
-      "redirectUrl": "https://example.com" // If the user asks to open a website or app, always include the correct URL here. If you don't know the URL, set this to null.
-    }
-
-    The user said: "${command}"
-
-    Provide a helpful response. If they ask who created you, say you were created by ${userName}.
-    If the user asks to open a website or app, always include the correct URL in the 'redirectUrl' field. If you don't know the URL, set it to null. Only respond with the JSON object, nothing else.`;
-
-    console.log('Sending request to Gemini API...');
-    console.log('API URL:', apiUrl.replace(apiKey, 'HIDDEN_KEY'));
-    console.log('Command:', command);
-
-    try {
-      const requestData = {
-        contents: [
-          {
-            parts: [
-              {
-                text: systemPrompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        }
-      };
-
-      console.log('Request data:', JSON.stringify(requestData, null, 2));
-
-      const result = await axios.post(apiUrl, requestData, {
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 30000 // Increased timeout
-      });
-
-      console.log('Gemini API response status:', result.status);
-      console.log('Gemini API response data:', result.data);
-
-      // Extract response text from Gemini's response structure
-      const rawText = result?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (!rawText) {
-        console.error('No text found in Gemini response:', result.data);
-        return {
-          type: "general",
-          userinput: command,
-          response: "Sorry, I didn't get a valid response from the AI service.",
-          redirectUrl: null
-        };
+    const requestData = {
+      contents: [{ parts: [{ text: systemPrompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024
       }
+    };
 
-      console.log('Raw response text:', rawText);
+    const result = await axios.post(apiUrl, requestData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timeout: 30000
+    });
 
-      // Try to extract and parse JSON
-      let jsonStr = rawText.trim();
-      
-      // Remove markdown code block if present
-      const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[1].trim();
-      }
-
-      // Remove any leading "json" text
-      jsonStr = jsonStr.replace(/^\s*json\s*/i, '').trim();
-
-      let parsed;
-      try {
-        parsed = JSON.parse(jsonStr);
-        console.log('Parsed JSON response:', parsed);
-      } catch (parseError) {
-        console.error("Failed to parse JSON:", parseError);
-        console.error("Raw text was:", rawText);
-        
-        // Fallback: create a response manually
-        return {
-          type: "general",
-          userinput: command,
-          response: rawText, // Use the raw response as fallback
-          redirectUrl: null
-        };
-      }
-
-      // Validate the parsed response structure
-      if (!parsed || typeof parsed !== 'object') {
-        console.error('Invalid response structure:', parsed);
-        return {
-          type: "general",
-          userinput: command,
-          response: "I received an invalid response format.",
-          redirectUrl: null
-        };
-      }
-
-      // Ensure required fields exist
-      const validResponse = {
-        type: parsed.type || "general",
-        userinput: parsed.userinput || command,
-        response: parsed.response || "I'm not sure how to respond to that.",
-        redirectUrl: parsed.redirectUrl || parsed.redirectTo || null
-      };
-
-      console.log('Final response:', validResponse);
-      return validResponse;
-
-    } catch (error) {
-      console.error("Gemini API error details:");
-      
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        console.error("Status:", error.response.status);
-        console.error("Status text:", error.response.statusText);
-        console.error("Response data:", error.response.data);
-        console.error("Response headers:", error.response.headers);
-        
-        // Handle specific error cases
-        if (error.response.status === 403) {
-          return {
-            type: "general",
-            userinput: command,
-            response: "API access forbidden. Please check your API key.",
-            redirectUrl: null
-          };
-        } else if (error.response.status === 429) {
-          return {
-            type: "general",
-            userinput: command,
-            response: "Too many requests. Please try again later.",
-            redirectUrl: null
-          };
-        } else if (error.response.status === 400) {
-          return {
-            type: "general",
-            userinput: command,
-            response: "Bad request. Please check the input format.",
-            redirectUrl: null
-          };
-        }
-      } else if (error.request) {
-        // The request was made but no response was received
-        console.error("Request made but no response received:", error.request);
-      } else {
-        // Something happened in setting up the request
-        console.error("Error setting up request:", error.message);
-      }
-      
-      console.error("Full error:", error);
-      
+    const rawText = result?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) {
       return {
         type: "general",
         userinput: command,
-        response: "Sorry, I'm having trouble connecting to the AI service right now.",
+        response: "Didn't receive a proper response from Gemini.",
         redirectUrl: null
       };
     }
-  } catch (error) {
-    console.error('Gemini API error:', error);
+
+    let jsonStr = rawText.trim();
+    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) jsonStr = jsonMatch[1].trim();
+    jsonStr = jsonStr.replace(/^\s*json\s*/i, '').trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      return {
+        type: "general",
+        userinput: command,
+        response: rawText,
+        redirectUrl: null
+      };
+    }
+
+    return {
+      type: parsed.type || "general",
+      userinput: parsed.userinput || command,
+      response: parsed.response || "I'm not sure how to respond to that.",
+      redirectUrl: parsed.redirectUrl || parsed.redirectTo || null
+    };
+
+  } catch (err) {
+    console.error("Gemini error:", err);
     return {
       type: "general",
       userinput: command,
-      response: "Sorry, I couldn't process your request. Please try again later.",
+      response: "Sorry, something went wrong. Please try again.",
       redirectUrl: null
     };
   }

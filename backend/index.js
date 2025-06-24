@@ -10,14 +10,28 @@ import morgan from 'morgan';
 import geminiResponse from './Gemini.js';
 
 const app = express();
+
+const allowedOrigins = [
+  'https://ai-assistant-frontend-brown.vercel.app',
+  'https://ai-assistant-frontend-armaankhan3s-projects.vercel.app',
+  'https://ai-assistant-frontend-git-main-armaankhan3s-projects.vercel.app',
+  'http://localhost:5173'
+];
+
+// CORS MUST BE FIRST
 app.use(cors({
-    origin: [
-        "https://ai-assistant-frontend-brown.vercel.app",
-        "https://ai-assistant-frontend-git-main-armaankhan3s-projects.vercel.app",
-        "http://localhost:5173"
-    ],
-    credentials: true,
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
 }));
+
 const PORT = process.env.PORT || 8000;
 app.use(morgan('dev'));
 // Middleware

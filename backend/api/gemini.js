@@ -1,5 +1,7 @@
 import express from 'express';
 import geminiResponse from '../Gemini.js';
+// This file handles the Gemini API requests and responses
+// It receives commands and assistant names from the frontend, processes them using the Gemini API, and
 
 const router = express.Router();
 

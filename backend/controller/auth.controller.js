@@ -33,9 +33,9 @@ const login = async (req, res) => {
 
         res.cookie("token", token, {
             httpOnly: true,
-            maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
-            sameSite: "Strict",
-            secure: process.env.NODE_ENV === "production",
+            sameSite: "none", // Required for cross-site cookie
+            secure: true,     // Required for HTTPS
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 
         // Return safe user info only

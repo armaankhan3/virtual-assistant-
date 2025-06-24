@@ -5,8 +5,12 @@ export const UserContext = createContext();
 
 const serverUrl = import.meta.env.PROD
   ? "https://ai-virual-backend5.onrender.com"
+
   
   : "http://localhost:8000";
+
+// Ensure axios sends cookies with every request
+axios.defaults.withCredentials = true;
 
 const UserProvider = ({ children }) => {
   const [userdata, setUserdata] = useState(null);
@@ -14,7 +18,7 @@ const UserProvider = ({ children }) => {
   // Fetch current user data and set in context
   const handleCurrentUser = async () => {
     try {
-      const result = await axios.get(`${serverUrl}/api/user/current`, { withCredentials: true });
+      const result = await axios.get(`${serverUrl}/api/user/current`);
       setUserdata(result.data.user);
     } catch (error) {
       setUserdata(null);
@@ -24,7 +28,7 @@ const UserProvider = ({ children }) => {
 
   const getGeminiResponse = async (command) => {
     try {
-      const result = await axios.post(`${serverUrl}/api/user/asktoassistant`, { command }, { withCredentials: true });
+      const result = await axios.post(`${serverUrl}/api/user/asktoassistant`, { command });
       return result.data;
     } catch (error) {
       console.error("Error fetching Gemini response:", error);
