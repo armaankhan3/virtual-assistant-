@@ -115,8 +115,13 @@ const Signup = () => {
         setError("Signup failed. Please try again.");
         return;
       }
-      setUserdata(result.data.user || result.data);
-      localStorage.setItem('userdata', JSON.stringify(result.data.user || result.data));
+      const user = result.data.user || result.data;
+      setUserdata(user);
+      localStorage.setItem('userdata', JSON.stringify(user));
+      // store token if backend returns it (fallbacks may not)
+      if (result.data.token) localStorage.setItem('token', result.data.token);
+      // if no token, store the id for dev header fallback
+      if (!result.data.token && (user._id || user.id)) localStorage.setItem('dev_user_id', user._id || user.id);
       setError("");
       navigate('/customize'); // Redirect to customization page
     } catch (error) {

@@ -6,7 +6,9 @@ import upload from '../middleware/Multer.js';
 const userRouter = express.Router();
 
 userRouter.get("/current", isAuth, getcurrentUser);
-userRouter.post("/update", isAuth,upload.single("assistantImage") ,UpdateAssistent);
+userRouter.post("/update", isAuth, upload.single("assistantImage"), UpdateAssistent);
+// Backwards-compatible alias for earlier frontend typo/path
+userRouter.post("/updateassisment", isAuth, upload.single("assistantImage"), UpdateAssistent);
 userRouter.post("/asktoassistant", isAuth, askToAssistant);
 
 

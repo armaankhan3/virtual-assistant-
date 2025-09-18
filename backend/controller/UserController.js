@@ -1,4 +1,5 @@
 import User from "../models/user.model.js";
+import fallbackDb from "../config/fallbackDb.js";
 import Uploadoncloudinary from "../config/Cloudinary.js";
 import e, { response } from "express";
 import geminiResponse from "../Gemini.js";
@@ -6,8 +7,13 @@ import moment from "moment/moment.js";
 
 export const getcurrentUser = async (req, res) => {
     try {
-        const userId = req.user.id;
-        const user = await User.findById(userId).select("-password -__v");
+        const userId = req.user && (req.user.id || req.user._id || req.user);
+        let user = null;
+        try {
+            user = await User.findById(userId).select("-password -__v");
+        } catch (e) {
+            user = await fallbackDb.findUserById(userId);
+        }
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -51,11 +57,16 @@ export const UpdateAssistent = async (req, res) => {
             assistantUpdatedAt: new Date(),
         };
 
-        const user = await User.findByIdAndUpdate(
-            userId,
-            updateData,
-            { new: true, runValidators: true }
-        ).select("-password -__v");
+        let user = null;
+        try {
+            user = await User.findByIdAndUpdate(
+                userId,
+                updateData,
+                { new: true, runValidators: true }
+            ).select("-password -__v");
+        } catch (e) {
+            user = await fallbackDb.updateUser(userId, updateData);
+        }
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -69,7 +80,12 @@ export const UpdateAssistent = async (req, res) => {
 export const askToAssistant = async (req, res) => {
     try {
         const { command } = req.body;
-        const user = await User.findById(req.user.id);
+        let user = null;
+        try {
+            user = await User.findById(req.user.id);
+        } catch (e) {
+            user = await fallbackDb.findUserById(req.user.id);
+        }
         if (!user) {
             return res.status(404).json({ response: "User not found" });
         }

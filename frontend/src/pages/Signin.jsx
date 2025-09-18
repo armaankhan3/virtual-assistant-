@@ -81,6 +81,7 @@ const Signin = () => {
   React.useEffect(() => {
     if (!userdata) {
       const stored = localStorage.getItem('userdata');
+      console.log(stored)
       if (stored) setUserdata(JSON.parse(stored));
     }
   }, []);
@@ -103,6 +104,12 @@ const Signin = () => {
       }
       setUserdata(result.data.user);
       localStorage.setItem('userdata', JSON.stringify(result.data.user));
+      // Store token if backend returns it (for Authorization header)
+      if (result.data.token) localStorage.setItem('token', result.data.token);
+      // If no token, store the id for dev header fallback
+      if (!result.data.token && (result.data.user._id || result.data.user.id)) {
+        localStorage.setItem('dev_user_id', result.data.user._id || result.data.user.id);
+      }
       setError("");
       if (result.data.user?.assistantImage && result.data.user?.assistantName) {
         navigate('/home');

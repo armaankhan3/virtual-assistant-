@@ -1,9 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../contaxt/UserContext';
+import { useNavigate } from 'react-router-dom';
 
 // AudioStatus component: shows assistant name, online status, and voice command UI
-const AudioStatus = ({ assistantName, listening }) => (
+const AudioStatus = ({ assistantName, listening, isRecording, onMicClick }) => (
   <div className="flex flex-col items-center justify-center h-full w-full bg-gradient-to-br from-[#0a0a0f] via-[#181c2f] to-[#0f0026] rounded-3xl shadow-2xl p-6 md:p-8 min-h-[340px] min-w-[260px] md:min-h-[400px] md:min-w-[320px] relative overflow-hidden">
     {/* Animated background grid */}
     <div className="absolute inset-0 opacity-20">
@@ -44,26 +44,31 @@ const AudioStatus = ({ assistantName, listening }) => (
       </div>
       <div className="flex items-center gap-3 text-lime-400 text-xs font-semibold bg-black/30 px-4 py-2 rounded-full backdrop-blur-sm border border-cyan-400/30">
         <div className="relative">
-          <span className="w-2 h-2 rounded-full bg-lime-400 animate-pulse block"></span>
-          <span className="absolute inset-0 w-2 h-2 rounded-full bg-lime-400 animate-ping"></span>
+          <span className={`w-2 h-2 rounded-full ${isRecording ? 'bg-red-400 animate-pulse' : 'bg-lime-400 animate-pulse'} block`}></span>
+          <span className={`absolute inset-0 w-2 h-2 rounded-full ${isRecording ? 'bg-red-400 animate-ping' : 'bg-lime-400 animate-ping'}`}></span>
         </div>
-        <span>NEURAL LINK ACTIVE</span>
+        <span>{isRecording ? 'RECORDING...' : 'NEURAL LINK ACTIVE'}</span>
         <div className="flex gap-1">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className={`w-1 h-3 bg-lime-400 rounded-sm animate-pulse`} style={{animationDelay: `${i * 0.2}s`}}></div>
+            <div key={i} className={`w-1 h-3 ${isRecording ? 'bg-red-400' : 'bg-lime-400'} rounded-sm animate-pulse`} style={{animationDelay: `${i * 0.2}s`}}></div>
           ))}
         </div>
       </div>
     </div>
 
-    {/* Animated orb */}
+    {/* Animated orb with mic button */}
     <div className="flex items-center justify-center my-8 md:my-10 relative">
       {/* Outer ring */}
       <div className="absolute w-44 h-44 md:w-48 md:h-48 rounded-full border border-cyan-400/20 animate-spin" style={{animationDuration: '20s'}}></div>
       <div className="absolute w-36 h-36 md:w-40 md:h-40 rounded-full border border-purple-400/20 animate-spin" style={{animationDuration: '15s', animationDirection: 'reverse'}}></div>
-      {/* Main orb */}
-      <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-[#822aff] via-[#00fff0] to-[#191819] blur-[1px] animate-pulse relative flex items-center justify-center">
-        <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400/30 via-purple-500/30 to-cyan-400/30 ${listening ? 'animate-ping' : ''}`}></div>
+      
+      {/* Mic button - clickable orb */}
+      <button
+        onClick={onMicClick}
+        className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-[#822aff] via-[#00fff0] to-[#191819] blur-[1px] hover:blur-0 transition-all duration-300 relative flex items-center justify-center group cursor-pointer transform hover:scale-105"
+      >
+        <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400/30 via-purple-500/30 to-cyan-400/30 ${isRecording ? 'animate-ping' : 'group-hover:animate-pulse'}`}></div>
+        
         {/* Inner orb */}
         <div className="absolute inset-2 rounded-full bg-gradient-to-br from-transparent via-white/10 to-transparent backdrop-blur-sm">
           <svg width="100%" height="100%" viewBox="0 0 180 180" className="animate-spin" style={{animationDuration: '8s'}}>
@@ -80,21 +85,35 @@ const AudioStatus = ({ assistantName, listening }) => (
               </radialGradient>
             </defs>
             <ellipse cx="90" cy="90" rx="70" ry="70" fill="url(#orb)" />
-            {listening && <ellipse cx="90" cy="90" rx="60" ry="60" fill="url(#pulse)" className="animate-pulse" />}
+            {isRecording && <ellipse cx="90" cy="90" rx="60" ry="60" fill="url(#pulse)" className="animate-pulse" />}
           </svg>
         </div>
-        {/* Core indicator */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className={`w-4 h-4 rounded-full bg-gradient-to-r from-cyan-400 to-purple-500 ${listening ? 'animate-spin' : 'animate-pulse'}`}> 
-            <div className="w-full h-full rounded-full bg-gradient-to-r from-white/50 to-transparent animate-pulse"></div>
-          </div>
+        
+        {/* Mic icon in center */}
+        <div className="absolute inset-0 flex items-center justify-center z-10">
+          <svg 
+            className={`w-8 h-8 md:w-10 md:h-10 transition-all duration-300 ${isRecording ? 'text-red-400 animate-pulse' : 'text-white group-hover:text-cyan-300'}`} 
+            fill="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z"/>
+            <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+            <path d="M12 18v4"/>
+            <path d="M8 22h8"/>
+          </svg>
         </div>
-      </div>
+        
+        {/* Recording pulse ring */}
+        {isRecording && (
+          <div className="absolute inset-0 rounded-full border-4 border-red-400/50 animate-ping"></div>
+        )}
+      </button>
+      
       {/* Orbiting elements */}
       {[...Array(4)].map((_, i) => (
         <div
           key={i}
-          className="absolute w-2 h-2 bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full animate-spin"
+          className="absolute w-2 h-2 bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full animate-spin pointer-events-none"
           style={{
             transformOrigin: '0 0',
             transform: `rotate(${i * 90}deg) translateX(60px)`,
@@ -104,6 +123,13 @@ const AudioStatus = ({ assistantName, listening }) => (
         />
       ))}
     </div>
+
+    {/* Mic instruction text */}
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
+      <p className="text-cyan-300 text-sm font-medium bg-black/40 px-4 py-2 rounded-full backdrop-blur-sm border border-cyan-400/30">
+        {isRecording ? 'Listening... Click to stop' : 'Click to start listening'}
+      </p>
+    </div>
   </div>
 );
 
@@ -111,63 +137,53 @@ const Home = () => {
   const { userdata, getGeminiResponse } = useContext(UserContext);
   const navigate = useNavigate();
 
-  const [listening, setListening] = useState(true); // Always listening
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState(null);
   const [command, setCommand] = useState('');
   const [response, setResponse] = useState('');
   const [chat, setChat] = useState([]); // [{from: 'user'|'assistant', text: string}]
-  const [lastSpoken, setLastSpoken] = useState(''); // Prevent duplicate triggers
 
-  useEffect(() => {
-    if (!userdata || !userdata.assistantImage || !userdata.assistantName) {
-      navigate('/customize');
-    }
-  }, [userdata, navigate]);
-
-  if (!userdata || !userdata.assistantImage || !userdata.assistantName) return null;
-
+  // Initialize speech recognition
   useEffect(() => {
     const speechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (speechRecognition) {
-      const recognition = new speechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      const recognitionInstance = new speechRecognition();
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = 'en-US';
 
-      let isActive = true;
-      recognition.onstart = () => setListening(true);
-      recognition.onend = () => {
-        setListening(false);
-        if (isActive) recognition.start(); 
+      recognitionInstance.onstart = () => setIsRecording(true);
+      
+      recognitionInstance.onend = () => setIsRecording(false);
+      
+      recognitionInstance.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setCommand(transcript.trim());
       };
-      recognition.onresult = (event) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          }
-        }
-        if (finalTranscript) {
-          // Only trigger if assistant name is followed by a command (robust regex)
-          const name = (userdata.assistantName || '').toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const regex = new RegExp(`\\b${name}[, ]+(.*)`, 'i');
-          const match = finalTranscript.toLowerCase().match(regex);
-          if (match && match[1]) {
-            if (lastSpoken !== match[1].trim()) {
-              setCommand(match[1].trim());
-              setLastSpoken(match[1].trim());
-            }
-          }
-        }
+
+      recognitionInstance.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsRecording(false);
       };
-      recognition.start();
-      return () => {
-        isActive = false;
-        recognition.abort();
-      };
+
+      setRecognition(recognitionInstance);
     }
-  }, [userdata.assistantName, lastSpoken]);
+  }, []);
 
-  // Speak the assistant's response when it changes, but only once per response
+  // Handle mic button click
+  const handleMicClick = () => {
+    if (!recognition) {
+      alert('Speech recognition is not supported in your browser');
+      return;
+    }
+    if (isRecording) {
+      recognition.stop();
+    } else {
+      recognition.start();
+    }
+  };
+
+  // Speak the assistant's response when it changes
   useEffect(() => {
     if (response && typeof response === 'string') {
       if (window.speechSynthesis) {
@@ -184,29 +200,33 @@ const Home = () => {
     }
   }, [response]);
 
-  // When you get a response from Gemini, set it to `response` state and update chat
+  // Only process command when user clicks mic and speech is recognized
+  const processCommand = async (cmd) => {
+    if (!cmd || typeof cmd !== 'string' || cmd.trim().length === 0) return;
+    setChat(prev => [...prev, { from: 'user', text: cmd }]);
+    try {
+      const geminiRes = await getGeminiResponse(cmd);
+      if (geminiRes && geminiRes.response) {
+        setResponse(geminiRes.response);
+        setChat(prev => [...prev, { from: 'assistant', text: geminiRes.response }]);
+        if (geminiRes.redirectUrl) {
+          window.open(geminiRes.redirectUrl, '_blank');
+        }
+      } else {
+        setResponse("Sorry, I didn't get that.");
+        setChat(prev => [...prev, { from: 'assistant', text: "Sorry, I didn't get that." }]);
+      }
+    } catch (err) {
+      setResponse("Sorry, something went wrong.");
+      setChat(prev => [...prev, { from: 'assistant', text: "Sorry, something went wrong." }]);
+    }
+    setCommand('');
+  };
+
+  // When speech recognition result is received, process the command
   useEffect(() => {
     if (command && typeof command === 'string' && command.trim().length > 0) {
-      (async () => {
-        setChat(prev => [...prev, { from: 'user', text: command }]);
-        try {
-          const geminiRes = await getGeminiResponse(command);
-          if (geminiRes && geminiRes.response) {
-            setResponse(geminiRes.response);
-            setChat(prev => [...prev, { from: 'assistant', text: geminiRes.response }]);
-            if (geminiRes.redirectUrl) {
-              window.open(geminiRes.redirectUrl, '_blank');
-            }
-          } else {
-            setResponse("Sorry, I didn't get that.");
-            setChat(prev => [...prev, { from: 'assistant', text: "Sorry, I didn't get that." }]);
-          }
-        } catch (err) {
-          setResponse("Sorry, something went wrong.");
-          setChat(prev => [...prev, { from: 'assistant', text: "Sorry, something went wrong." }]);
-        }
-        setCommand(''); // Clear command after processing
-      })();
+      processCommand(command);
     }
     // eslint-disable-next-line
   }, [command]);
@@ -224,21 +244,27 @@ const Home = () => {
         <div className="relative mb-8">
           {/* Image glow effect */}
           <div className="absolute -inset-4 bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full opacity-30 animate-pulse blur-lg"></div>
-          <img
-            src={userdata.assistantImage}
-            alt={userdata.assistantName}
-            className="relative w-40 h-40 rounded-full object-cover border-4 border-cyan-400/60 shadow-2xl bg-white"
-          />
+          {userdata && userdata.assistantImage ? (
+            <img
+              src={userdata.assistantImage}
+              alt={userdata.assistantName || 'Assistant'}
+              className="relative w-40 h-40 rounded-full object-cover border-4 border-cyan-400/60 shadow-2xl bg-white"
+            />
+          ) : (
+            <div className="relative w-40 h-40 rounded-full bg-gray-700 flex items-center justify-center text-4xl text-white border-4 border-cyan-400/60 shadow-2xl">
+              ?
+            </div>
+          )}
           {/* Status ring */}
           <div className="absolute -inset-2 rounded-full border-2 border-lime-400/50 animate-spin" style={{animationDuration: '3s'}}></div>
         </div>
 
         <div className="text-center">
           <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 via-white to-purple-400 bg-clip-text text-transparent">
-            {userdata.assistantName}
+            {userdata?.assistantName || 'Your Assistant'}
           </h1>
           <div className="mb-6">
-            <p className="text-lg text-gray-300 max-w-xl leading-relaxed">{userdata.description}</p>
+            <p className="text-lg text-gray-300 max-w-xl leading-relaxed">{userdata?.description || 'Your intelligent voice assistant.'}</p>
           </div>
           {/* System stats */}
           <div className="grid grid-cols-3 gap-4 mb-8 text-sm">
@@ -267,39 +293,51 @@ const Home = () => {
 
       {/* Right: AudioStatus and Chat Section */}
       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-xl relative z-10 min-w-[340px] min-h-[540px] md:min-w-[420px] md:min-h-[600px]">
-        {/* Animated Activity Status Bar */}
+        {/* Recording Status Bar */}
         <div className="w-full flex items-center justify-center mb-4">
           <div className={`relative flex items-center gap-3 px-6 py-3 rounded-full font-semibold text-base shadow-xl border-2 transition-all duration-300 overflow-hidden
-            ${listening ? 'bg-gradient-to-r from-green-900/60 via-green-800/40 to-cyan-900/40 border-green-400/80' : 'bg-gradient-to-r from-red-900/60 via-red-800/40 to-purple-900/40 border-red-400/80'}`}
+            ${isRecording ? 'bg-gradient-to-r from-red-900/60 via-red-800/40 to-orange-900/40 border-red-400/80' : 'bg-gradient-to-r from-cyan-900/60 via-cyan-800/40 to-purple-900/40 border-cyan-400/80'}`}
           >
             {/* Animated Glow Border */}
-            {listening && (
-              <span className="absolute inset-0 rounded-full border-4 border-green-400/40 blur-md animate-pulse z-0"></span>
+            {isRecording && (
+              <span className="absolute inset-0 rounded-full border-4 border-red-400/40 blur-md animate-pulse z-0"></span>
             )}
             {/* Animated Icon */}
             <span className="relative z-10">
-              {listening ? (
-                <svg className="w-6 h-6 text-green-400 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6a3 3 0 016 0v13m-6 0a3 3 0 006 0m-6 0H5a2 2 0 01-2-2v-2a2 2 0 012-2h2m6 6h4a2 2 0 002-2v-2a2 2 0 00-2-2h-2" /></svg>
+              {isRecording ? (
+                <svg className="w-6 h-6 text-red-400 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z"/>
+                  <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                  <path d="M12 18v4"/>
+                  <path d="M8 22h8"/>
+                </svg>
               ) : (
-                <svg className="w-6 h-6 text-red-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-1.414 1.414A9 9 0 015.636 18.364l-1.414-1.414M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                <svg className="w-6 h-6 text-cyan-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6a3 3 0 016 0v13m-6 0a3 3 0 006 0m-6 0H5a2 2 0 01-2-2v-2a2 2 0 012-2h2m6 6h4a2 2 0 002-2v-2a2 2 0 00-2-2h-2" />
+                </svg>
               )}
             </span>
             {/* Soundwave Animation */}
-            {listening && (
+            {isRecording && (
               <span className="flex items-end gap-1 h-6 relative z-10">
                 {[1,2,3,4,5].map(i => (
-                  <span key={i} className={`w-1.5 rounded bg-green-400 animate-wave`} style={{animationDelay: `${i * 0.12}s`}}></span>
+                  <span key={i} className={`w-1.5 rounded bg-red-400 animate-wave`} style={{animationDelay: `${i * 0.12}s`}}></span>
                 ))}
               </span>
             )}
-            {/* Animated Text */}
-            <span className={`relative z-10 font-bold bg-gradient-to-r from-green-300 via-cyan-200 to-green-300 bg-clip-text text-transparent animate-shimmer`}>{listening ? 'Listening...' : 'Not Listening'}</span>
+            {/* Status Text */}
+            <span className={`relative z-10 font-bold ${isRecording ? 'text-red-300' : 'text-cyan-300'}`}>
+              {isRecording ? 'Recording...' : 'Ready to Listen'}
+            </span>
           </div>
         </div>
+
         <AudioStatus
-          assistantName={userdata.assistantName}
-          listening={listening}
+          assistantName={userdata?.assistantName}
+          isRecording={isRecording}
+          onMicClick={handleMicClick}
         />
+
         {/* Chat-like response area */}
         <div
           className="w-full max-w-lg mt-8 flex flex-col gap-2"
@@ -317,7 +355,12 @@ const Home = () => {
           }}
         >
           {chat.length === 0 && (
-            <div className="text-center text-gray-400">Say "{userdata.assistantName}, ..." to start the conversation.</div>
+            <div className="text-center text-gray-400 py-8">
+              <svg className="w-12 h-12 mx-auto mb-4 text-cyan-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 016 0v6a3 3 0 01-3 3z" />
+              </svg>
+              <p>Click the mic button to start talking</p>
+            </div>
           )}
           {chat.map((msg, idx) => (
             <div
@@ -326,11 +369,17 @@ const Home = () => {
             >
               {msg.from === 'assistant' && (
                 <div className="flex-shrink-0">
-                  <img
-                    src={userdata.assistantImage}
-                    alt={userdata.assistantName}
-                    className="w-8 h-8 rounded-full border-2 border-cyan-400 shadow"
-                  />
+                  {userdata && userdata.assistantImage ? (
+                    <img
+                      src={userdata.assistantImage}
+                      alt={userdata.assistantName || 'Assistant'}
+                      className="w-8 h-8 rounded-full border-2 border-cyan-400 shadow"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white border-2 border-cyan-400 shadow">
+                      ?
+                    </div>
+                  )}
                 </div>
               )}
               <div
@@ -350,7 +399,7 @@ const Home = () => {
                 }}
               >
                 <span className="block text-xs font-semibold mb-1 opacity-80">
-                  {msg.from === 'user' ? 'You' : userdata.assistantName}
+                  {msg.from === 'user' ? 'You' : (userdata?.assistantName || 'Assistant')}
                 </span>
                 <span className="block text-base">{msg.text}</span>
                 {/* Message tail */}

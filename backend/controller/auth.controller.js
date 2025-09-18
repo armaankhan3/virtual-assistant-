@@ -1,92 +1,103 @@
-import gentoken from "../config/token.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
+import genToken from "../config/Token.js";
+import fallbackDb from "../config/fallbackDb.js";
 
-const sanitizeUser = (user) => {
-    if (!user) return null;
-    const { password, __v, ...rest } = user.toObject ? user.toObject() : user;
-    return rest;
-};
+export const signup = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    console.log('Signup request body:', req.body);
 
-const login = async (req, res) => {
+    if (!name || !email || !password) {
+      console.log('Missing fields:', { name, email, password });
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    let existEmail = null;
     try {
-        let { email, password } = req.body;
-        console.log('LOGIN ATTEMPT:', { email, password }); // Log incoming signin data
-        if (!email || !password) {
-            return res.status(400).json({ message: "Email and password are required" });
-        }
-        email = email.trim();
-        password = password.trim();
+      existEmail = await User.findOne({ email });
+    } catch (e) {
+      existEmail = await fallbackDb.findUserByEmail(email);
+    }
+    if (existEmail) {
+      console.log('Email already exists:', email);
+      return res.status(400).json({ message: "Email already exists" });
+    }
 
-        const user = await User.findOne({ email });
-        if (!user) {
-            console.log('LOGIN FAILED: Email does not exist');
-            return res.status(400).json({ message: "Email does not exist!" });
-        }
+    if (password.length < 8) {
+      console.log('Password too short:', password);
+      return res.status(400).json({ message: "Password must be at least 8 characters" });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    let user;
+    try {
+      user = await User.create({ name, email, password: hashedPassword });
+    } catch (e) {
+      user = await fallbackDb.createUser({ name, email, password: hashedPassword });
+    }
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            console.log('LOGIN FAILED: Incorrect password');
-            return res.status(400).json({ message: "Incorrect password" });
-        }
-        const token = gentoken(user._id);
+  const token = genToken(user._id);
+    res.cookie("token", token, {
+      httpOnly: true,
+      maxAge: 365 * 24 * 60 * 60 * 1000, // Extended to 1 year
+      secure: process.env.NODE_ENV === "production" ? true : false,
+      sameSite: "none",
+    });
 
+    // Return token and user for frontend convenience
+    res.status(201).json({ user, token });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ message: `Sign up error: ${error.message}` });
+  }
+};
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    let user;
+    try {
+      user = await User.findOne({ email });
+    } catch (e) {
+      user = await fallbackDb.findUserByEmail(email);
+    }
+    if (!user) {
+      return res.status(400).json({ message: "Email does not exist" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid password" });
+    }
+    const token = genToken(user._id);
         res.cookie("token", token, {
             httpOnly: true,
-            sameSite: "none", // Required for cross-site cookie
-            secure: true,     // Required for HTTPS
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        });
-
-        // Return safe user info only
-        const safeUser = sanitizeUser(user);
-        console.log('LOGIN SUCCESS:', safeUser);
-        res.status(200).json({ user: safeUser, message: "Login successful" });
-
-    } catch (error) {
-        console.log('LOGIN ERROR:', error);
-        return res.status(500).json({ message: `Login error: ${error.message}` });
-    }
-};
-
-const logout = async (req, res) => {
-    try {
-        res.clearCookie("token", {
-            httpOnly: true,
-            sameSite: "Strict",
+            maxAge: 365 * 24 * 60 * 60 * 1000, // Extended to 1 year
             secure: process.env.NODE_ENV === "production",
+            sameSite: "none",
         });
-        return res.status(200).json({ message: "Logout successful" });
-    } catch (error) {
-        return res.status(500).json({ message: `Logout error: ${error.message}` });
-    }
+        console.log("Login: Set-Cookie token:", token);
+        console.log("Login: Cookie options:", {
+            httpOnly: true,
+            maxAge: 365 * 24 * 60 * 60 * 1000,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "none",
+        });
+        console.log("Login: Request cookies before response:", req.cookies);
+    // Return token so frontend can store it if needed
+    res.status(200).json({ user, token });
+  } catch (error) {
+    res.status(500).json({ message: `Login error: ${error.message}` });
+  }
+};
+export const logout = (req, res) => {
+  try {
+    res.clearCookie("token");
+    res.status(200).json({ message: "Logout successful" });
+  } catch (error) {
+    res.status(500).json({ message: `Logout error: ${error.message}` });
+  }
 };
 
-const signup = async (req, res) => {
-    try {
-        let { name, email, password } = req.body;
-        console.log('SIGNUP ATTEMPT:', { name, email, password }); // Log incoming signup data
-        if (!name || !email || !password) {
-            return res.status(400).json({ message: "All fields are required" });
-        }
-        name = name.trim();
-        email = email.trim();
-        password = password.trim();
-
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            console.log('SIGNUP FAILED: Email already registered');
-            return res.status(400).json({ message: "Email already registered" });
-        }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = await User.create({ name, email, password: hashedPassword });
-        console.log('SIGNUP SUCCESS:', sanitizeUser(newUser));
-        const safeUser = sanitizeUser(newUser);
-        return res.status(201).json({ user: safeUser, message: "Signup successful" });
-    } catch (error) {
-        console.log('SIGNUP ERROR:', error);
-        return res.status(500).json({ message: `Signup error: ${error.message}` });
-    }
-};
-
-export { signup, login, logout };
+// Backwards-compatible aliases (if any other files import old names)
+export { signup as signUp, login as LogIn, logout as LogOut };

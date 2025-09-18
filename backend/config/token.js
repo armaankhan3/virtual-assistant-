@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 
 const gentoken = (userId) => {    
     try {
-        return jwt.sign({ id: userId }, process.env.jwt_secret, {
+        return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
             expiresIn: "10d",
         });
     } catch (error) {

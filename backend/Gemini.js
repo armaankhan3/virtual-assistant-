@@ -288,6 +288,16 @@ const geminiResponse = async (command, assistantName, userName = "Unknown") => {
     const builtIn = handleBuiltInCommand(command, userName);
     if (builtIn) return builtIn;
 
+    // Fallback for unknown commands (before Gemini API)
+    if (command.toLowerCase().includes('help')) {
+      return {
+        type: "general",
+        userinput: command,
+        response: "You can ask me to open websites, get the time/date, or ask for jokes, news, weather, and more!",
+        redirectUrl: null
+      };
+    }
+
     // ✅ Gemini API Setup
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -323,13 +333,28 @@ Do not say anything outside this JSON.`;
       }
     };
 
-    const result = await axios.post(apiUrl, requestData, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      timeout: 30000
-    });
+    let result;
+    try {
+      result = await axios.post(apiUrl, requestData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 30000
+      });
+    } catch (apiErr) {
+      if (apiErr.response) {
+        console.error('Gemini API error:', apiErr.response.status, apiErr.response.data);
+      } else {
+        console.error('Gemini API error:', apiErr.message);
+      }
+      return {
+        type: "general",
+        userinput: command,
+        response: "Gemini API error: " + (apiErr.response?.data?.error?.message || apiErr.message || 'Unknown error'),
+        redirectUrl: null
+      };
+    }
 
     const rawText = result?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) {
@@ -349,13 +374,28 @@ Do not say anything outside this JSON.`;
     let parsed;
     try {
       parsed = JSON.parse(jsonStr);
-    } catch {
-      return {
-        type: "general",
-        userinput: command,
-        response: rawText,
-        redirectUrl: null
-      };
+    } catch (err) {
+      // Try to extract JSON from text if possible
+      const fallbackMatch = jsonStr.match(/\{[\s\S]*\}/);
+      if (fallbackMatch) {
+        try {
+          parsed = JSON.parse(fallbackMatch[0]);
+        } catch {
+          return {
+            type: "general",
+            userinput: command,
+            response: "Sorry, I couldn't understand the response. Please try again.",
+            redirectUrl: null
+          };
+        }
+      } else {
+        return {
+          type: "general",
+          userinput: command,
+          response: "Sorry, I couldn't understand the response. Please try again.",
+          redirectUrl: null
+        };
+      }
     }
 
     return {

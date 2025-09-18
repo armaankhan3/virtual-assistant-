@@ -1,60 +1,51 @@
-import express from 'express';
-import dotenv from 'dotenv';
+// index.js
+import dotenv from "dotenv";
 dotenv.config();
-import connectdb from './config/db.js';
-import authRouter from './routes/auth.route.js';
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
-import userRouter from './routes/UserRoutes.js';
-import morgan from 'morgan';
-import geminiResponse from './Gemini.js';
+
+import express from "express";
+import connectdb from "./config/db.js";
+import authRouter from "./routes/auth.route.js";
+import UserRouter from "./routes/UserRoutes.js";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import geminiresponse from "./Gemini.js";
+import morgan from "morgan";
 
 const app = express();
-
-const allowedOrigins = [
-  'https://ai-assistant-frontend-brown.vercel.app',
-  'https://ai-assistant-frontend-armaankhan3s-projects.vercel.app',
-  'https://ai-assistant-frontend-git-main-armaankhan3s-projects.vercel.app',
-  'http://localhost:5173'
-];
-
-// CORS MUST BE FIRST
-app.use(cors({
-  origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  credentials: true
-}));
-
-const PORT = process.env.PORT || 8000;
-app.use(morgan('dev'));
-// Middleware
+const port = process.env.PORT || 5000;
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
-
+app.use(morgan("dev"));
 
 app.use("/api/auth", authRouter);
-app.use("/api/user", userRouter);
-app.use("/api/gemini", geminiResponse);
+app.use("/api/user", UserRouter);
 
-
-// Start server
-const startServer = async () => {
-    try {
-        await connectdb();
-        app.listen(PORT, () => {
-            console.log(`Server running on http://localhost:${PORT}`);
-        });
-    } catch (err) {
-        console.error(' Failed to start server:', err.message);
-        process.exit(1);
+app.post("/api/gemini/respond", async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message || typeof message !== "string") {
+      return res
+        .status(400)
+        .json({ error: "Invalid or missing 'message' in request body." });
     }
-};
 
-startServer();
+    const reply = await geminiresponse(message, "assistatName", "Danish khan");
+    console.log(reply);
+    res.json({ reply });
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    res.status(500).json({ error: "Failed to get AI response" });
+  }
+});
+
+connectdb();
+
+app.listen(port, () => {
+  console.log(`Server started on port ${port}`);
+});
