@@ -170,7 +170,7 @@ const Home = () => {
     }
   }, []);
 
-  // Handle mic button click
+ 
   const handleMicClick = () => {
     if (!recognition) {
       alert('Speech recognition is not supported in your browser');
