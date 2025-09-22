@@ -177,9 +177,9 @@ const Home = () => {
       return;
     }
     if (isRecording) {
-      recognition.stop();
+      try { recognition.stop(); } catch (e) { console.warn('stop error', e); }
     } else {
-      recognition.start();
+      try { recognition.start(); } catch (e) { console.warn('start error', e); }
     }
   };
 
