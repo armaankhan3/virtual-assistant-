@@ -1,6 +1,63 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
+import fetch from 'node-fetch';
+
+// Simple in-memory cache for recent prompts (keyed by assistant+prompt)
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const cache = new Map();
+
+function cacheKey(assistant, prompt) {
+  return `${assistant || 'anon'}::${String(prompt || '')}`;
+}
+
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+async function callGeminiWithRetry(requestData, opts = {}) {
+  const { assistantName, prompt } = opts || {};
+  if (assistantName && prompt) {
+    const key = cacheKey(assistantName, prompt);
+    const cached = cache.get(key);
+    if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+      return cached.data;
+    }
+  }
+
+  const maxAttempts = 5;
+  let delay = 500;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await axios.post(process.env.GEMINI_API_URL || `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        requestData,
+        { headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, timeout: 30000 }
+      );
+
+      if (res.status === 429) {
+        const body = res.data || {};
+        const err = new Error('Gemini rate limited (429)');
+        err.status = 429; err.body = body; throw err;
+      }
+
+      if (!res || !res.data) throw new Error('Empty Gemini response');
+
+      const data = res.data;
+      if (assistantName && prompt) {
+        const key = cacheKey(assistantName, prompt);
+        cache.set(key, { ts: Date.now(), data });
+      }
+      return data;
+    } catch (err) {
+      if (attempt === maxAttempts) throw err;
+      // aggressive backoff for quota issues
+      if (err && (err.status === 429 || (err.response && err.response.status === 429))) {
+        await sleep(delay * 6);
+      } else {
+        await sleep(delay);
+      }
+      delay *= 2;
+    }
+  }
+}
 
 // Load .env fallback
 if (typeof process !== 'undefined' && process.env) {
@@ -335,28 +392,17 @@ Do not say anything outside this JSON.`;
 
     let result;
     try {
-      result = await axios.post(apiUrl, requestData, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 30000
-      });
+      result = await callGeminiWithRetry(requestData, { assistantName, prompt: command });
     } catch (apiErr) {
-      if (apiErr.response) {
-        console.error('Gemini API error:', apiErr.response.status, apiErr.response.data);
-      } else {
-        console.error('Gemini API error:', apiErr.message);
+      if (apiErr && apiErr.status === 429) {
+        console.error('Gemini API rate limit:', apiErr.body || apiErr.message);
+        return { type: 'general', userinput: command, response: 'Gemini API error: Quota exceeded. Please try again later.', redirectUrl: null };
       }
-      return {
-        type: "general",
-        userinput: command,
-        response: "Gemini API error: " + (apiErr.response?.data?.error?.message || apiErr.message || 'Unknown error'),
-        redirectUrl: null
-      };
+      console.error('Gemini API error:', apiErr?.response?.status || apiErr?.status || apiErr?.message, apiErr?.response?.data || apiErr?.body || apiErr);
+      return { type: 'general', userinput: command, response: 'Gemini API error: ' + (apiErr?.response?.data?.error?.message || apiErr?.message || 'Unknown error'), redirectUrl: null };
     }
 
-    const rawText = result?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) {
       return {
         type: "general",
