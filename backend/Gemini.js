@@ -288,7 +288,7 @@ const geminiResponse = async (command, assistantName, userName = "Unknown") => {
     const builtIn = handleBuiltInCommand(command, userName);
     if (builtIn) return builtIn;
 
-    // Fallback for unknown commands (before Gemini API)
+    // Fallback for unknown  hkuhuh hiugig igiugigicommands (before Gemini API)
     if (command.toLowerCase().includes('help')) {
       return {
         type: "general",
