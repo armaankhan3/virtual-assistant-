@@ -10,6 +10,7 @@ axios.defaults.withCredentials = true;
 
 const UserProvider = ({ children }) => {
   const [userdata, setUserdata] = useState(null);
+  const [backendAvailable, setBackendAvailable] = useState(true);
 
   // Fetch current user data and set in context
   const handleCurrentUser = async () => {
@@ -31,16 +32,22 @@ const UserProvider = ({ children }) => {
         headers,
       });
       setUserdata(result.data.user);
+      setBackendAvailable(true);
     } catch (error) {
+      // Distinguish between unauthenticated vs backend/network errors
       if (error.response && error.response.status === 401) {
-        // Not logged in, don't show alert
+        // Not logged in, clear user but backend is available
         setUserdata(null);
+        setBackendAvailable(true);
+      } else if (error.request) {
+        // Request made but no response (network/server down)
+        console.error('Current user network error:', error);
+        setUserdata(null);
+        setBackendAvailable(false);
       } else {
         console.error('Current user fetch error:', error);
         setUserdata(null);
-        if (error.response && error.response.data && error.response.data.message) {
-          alert('Authentication error: ' + error.response.data.message);
-        }
+        setBackendAvailable(false);
       }
     }
   };
@@ -59,20 +66,31 @@ const UserProvider = ({ children }) => {
         { command },
         { headers, withCredentials: true }
       );
+      setBackendAvailable(true);
       return result.data;
     } catch (error) {
       console.error("Error fetching Gemini response:", error);
-      if (error.response) {
-        // Server responded with a status other than 2xx
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-      } else if (error.request) {
-        // Request was made but no response received
-        console.error("No response received:", error.request);
-      } else {
-        // Something else happened
-        console.error("Error message:", error.message);
+      // Mark backend availability
+      if (error.request && !error.response) {
+        setBackendAvailable(false);
       }
+
+      // If server returned 429 or a Gemini quota error, give a helpful fallback
+      if (error.response && (error.response.status === 429 || (error.response.data && typeof error.response.data.response === 'string' && error.response.data.response.toLowerCase().includes('quota')))) {
+        return {
+          fallback: true,
+          response: 'Assistant is temporarily unavailable due to API quota limits. Here is a fallback reply: I heard you — try again in a moment or use a local assistant.'
+        };
+      }
+
+      // If network or server down, return a friendly offline fallback for local dev
+      if (!error.response) {
+        return {
+          fallback: true,
+          response: 'Offline fallback: I cannot reach the remote assistant right now. Try again later or enable local dev mode.'
+        };
+      }
+      return null;
     }
   }
 
@@ -94,6 +112,7 @@ const UserProvider = ({ children }) => {
     serverUrl,
     userdata,
     setUserdata,
+    backendAvailable,
     signOut,
     getGeminiResponse,
   };

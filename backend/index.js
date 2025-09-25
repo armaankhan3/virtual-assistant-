@@ -9,8 +9,10 @@ import UserRouter from "./routes/UserRoutes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import geminiresponse from "./Gemini.js";
+import { getLastTimings } from './controller/UserController.js';
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+// touch: nodemon restart trigger
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -68,4 +70,14 @@ connectdb();
 
 app.listen(port, () => {
   console.log(`Server started on port ${port}`);
+});
+
+// Health endpoint to get last timing info
+app.get('/api/health/timings', (req, res) => {
+  try {
+    const t = global.__lastTimings__ || null;
+    res.json({ timings: t });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to read timings' });
+  }
 });

@@ -264,7 +264,7 @@ const VirtualAIHomePage = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes gradient-text {
           0%, 100% { 
             background-position: 0% 50%;

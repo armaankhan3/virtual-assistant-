@@ -22,9 +22,13 @@ const connectdb = async () => {
         }
 
         await mongoose.connect(uri, {
-            // Mongoose 8 defaults are fine; options kept explicit for clarity
+            // Fail faster when MongoDB is unreachable to avoid long request latency
+            // Mongoose 8 defaults are fine; we override selection/connect timeouts here.
+            // Note: useNewUrlParser/useUnifiedTopology are no-ops in modern drivers but kept for clarity.
             useNewUrlParser: true,
             useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 5000, // 5s
+            connectTimeoutMS: 5000,
         });
         console.log('MongoDB connected');
     }
