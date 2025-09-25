@@ -1,28 +1,24 @@
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://ai-virual-backend5.onrender.com';
+// Use Vite environment variable for the backend URL. Vite requires variables to be prefixed with VITE_.
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://virtual-assistant-backend-ittz.onrender.com' || 'http://localhost:8000';
 
-fetch(`${BACKEND_URL}/api/user/current`, {
-  method: 'GET',
-  headers: {
-    'Content-Type': 'application/json'
-    // Remove Authorization header if using cookies
-  },
-  credentials: 'include' // If backend uses cookies
-})
-.then(async response => {
-  if (!response.ok) {
-    // Try to parse error message from backend
-    let errorMsg = 'Network response was not ok ' + response.statusText;
+export async function fetchCurrentUser() {
+  const res = await fetch(`${BACKEND_URL}/api/user/current`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include'
+  });
+
+  if (!res.ok) {
+    let errorMsg = 'Network response was not ok ' + res.statusText;
     try {
-      const errData = await response.json();
+      const errData = await res.json();
       errorMsg += ': ' + (errData.message || JSON.stringify(errData));
     } catch {}
     throw new Error(errorMsg);
   }
-  return response.json();
-})
-.then(data => {
-  console.log('Success:', data);
-})
-.catch((error) => {
-  console.error('Error:', error);
-});
+  return res.json();
+}
+
+export default BACKEND_URL;

@@ -1,9 +1,12 @@
+
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 export const UserContext = createContext();
 
-const serverUrl = "http://localhost:8000"; // Updated backend URL to match .env port
+// Prefer the Vite environment variable VITE_BACKEND_URL in production.
+// Fall back to the supplied live backend on Render, then to localhost for local dev.
+const SERVER_URL = import.meta.env.VITE_BACKEND_URL || 'https://virtual-assistant-backend-ittz.onrender.com' || 'http://localhost:8000';
 
 // Ensure axios sends cookies with every request
 axios.defaults.withCredentials = true;
@@ -27,7 +30,7 @@ const UserProvider = ({ children }) => {
     }
 
     try {
-      const result = await axios.get(`${serverUrl}/api/user/current`, {
+      const result = await axios.get(`${SERVER_URL}/api/user/current`, {
         withCredentials: true,
         headers,
       });
@@ -62,7 +65,7 @@ const UserProvider = ({ children }) => {
       if (token) headers['Authorization'] = `Bearer ${token}`;
       else if (devUserId) headers['x-dev-user-id'] = devUserId;
       const result = await axios.post(
-        `${serverUrl}/api/user/asktoassistant`,
+        `${SERVER_URL}/api/user/asktoassistant`,
         { command },
         { headers, withCredentials: true }
       );
@@ -101,7 +104,7 @@ const UserProvider = ({ children }) => {
   // Sign out and clear all user-related state
   const signOut = async () => {
     try {
-      await fetch(`${serverUrl}/api/auth/logout`, { method: 'GET', credentials: 'include' });
+  await fetch(`${SERVER_URL}/api/auth/logout`, { method: 'GET', credentials: 'include' });
     } catch (error) {
       console.error("Error during sign out:", error);
     }
@@ -109,7 +112,7 @@ const UserProvider = ({ children }) => {
   };
 
   const value = {
-    serverUrl,
+    serverUrl: SERVER_URL,
     userdata,
     setUserdata,
     backendAvailable,

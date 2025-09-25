@@ -42,7 +42,7 @@ const Customize = () => {
   const [uploadError, setUploadError] = useState('');
   const navigate = useNavigate();
   const { setUserdata } = useContext(UserContext);
-  const serverUrl = "http://localhost:8000";
+  const SERVER_URL = import.meta.env.VITE_BACKEND_URL || 'https://virtual-assistant-backend-ittz.onrender.com' || 'http://localhost:8000';
 
   const handleNext = async () => {
     if (selectedIdx === null) return;
@@ -66,7 +66,7 @@ const Customize = () => {
         setUploading(false);
         return;
       }
-      const uploadRes = await fetch(`${serverUrl}/api/user/updateassisment`, {
+  const uploadRes = await fetch(`${SERVER_URL}/api/user/updateassisment`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
