@@ -1,6 +1,6 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
-import genToken from "../config/Token.js";
+import genToken from "../config/token.js";
 import fallbackDb from "../config/fallbackDb.js";
 
 export const signup = async (req, res) => {
