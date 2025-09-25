@@ -128,4 +128,4 @@ const UserProvider = ({ children }) => {
 };
 
 export default UserProvider;
-export { serverUrl };
+export { SERVER_URL as serverUrl };
